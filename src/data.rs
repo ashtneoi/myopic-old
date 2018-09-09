@@ -1,3 +1,5 @@
+use std::ptr;
+
 #[derive(Clone)]
 struct Insn {
     desc: &'static InsnDesc,
@@ -23,6 +25,7 @@ enum Syntax {
     Normal,
     MoviwwiMM,
     MoviwwiOffset,
+    Tris,
 }
 
 #[derive(Clone, Copy)]
@@ -45,9 +48,28 @@ enum OpdDescKind {
     PCLATH,
     APK(u8), // absolute program memory address
     RPK(u8), // relative program memory address
-    TRIS, // TRIS register
     FSRn, // FSR register
     MM, // pre/post inc/dec
+}
+
+impl OpdDescKind {
+    fn width(&self) -> usize {
+        match *self {
+            DC(n)
+            | K(n)
+            | UK(n)
+            | SK(n)
+            | APK(n)
+            | RPK(n) => n as usize,
+            F => 7,
+            D => 1,
+            B => 3,
+            A => 5,
+            PCLATH => 7,
+            FSRn => 1,
+            MM => 2,
+        }
+    }
 }
 
 use self::OpdDescKind::*;
@@ -69,6 +91,40 @@ static FB_OPERANDS: &[OpdDesc] = &[
 static K8_OPERANDS: &[OpdDesc] = &[
     OpdDesc { field_idx: 0, kind: K(8) },
 ];
+
+fn get_insn_desc_table() -> Vec<&'static InsnDesc> {
+    let mut table = vec![&INVALID_INSN_DESC; 0b100_0000_0000_0000];
+    for desc in INSN_DESCS {
+        let total_opd_width: usize =
+            desc.operands.iter().map(|opd| opd.kind.width()).sum();
+        let mask: usize = (1 << total_opd_width) - 1;
+        let start: usize = desc.opcode as usize;
+        let end: usize = desc.opcode as usize | mask;
+        println!("{} {:b} {:b} {:b}", desc.mnemonic, mask, start, end);
+        for opcode in start..=end {
+            table[opcode] = desc;
+        }
+    }
+
+    return table
+}
+
+#[test]
+fn test_get_insn_desc_table() {
+    let table = get_insn_desc_table();
+    assert_eq!(table.len(), 0b100_0000_0000_0000);
+    assert_eq!(table[0b00_1001_0000_0000].mnemonic, "comf");
+    assert_eq!(table[0b00_1001_0111_1111].mnemonic, "comf");
+    assert_eq!(table[0b00_1001_1111_1111].mnemonic, "comf");
+    assert_eq!(table[0b00_0000_0000_0010].mnemonic, "_invalid_");
+}
+
+static INVALID_INSN_DESC: InsnDesc = InsnDesc {
+    mnemonic: "_invalid_",
+    syntax: Syntax::Normal,
+    operands: &[],
+    opcode: 0,
+};
 
 static INSN_DESCS: &[InsnDesc] = &[
     InsnDesc {
@@ -367,26 +423,20 @@ static INSN_DESCS: &[InsnDesc] = &[
     },
     InsnDesc {
         mnemonic: "tris_a",
-        syntax: Syntax::Normal,
-        operands: &[
-            OpdDesc { field_idx: 0, kind: TRIS },
-        ],
+        syntax: Syntax::Tris,
+        operands: &[],
         opcode: 0b00_0000_0110_0101,
     },
     InsnDesc {
         mnemonic: "tris_b",
-        syntax: Syntax::Normal,
-        operands: &[
-            OpdDesc { field_idx: 0, kind: TRIS },
-        ],
+        syntax: Syntax::Tris,
+        operands: &[],
         opcode: 0b00_0000_0110_0110,
     },
     InsnDesc {
         mnemonic: "tris_c",
-        syntax: Syntax::Normal,
-        operands: &[
-            OpdDesc { field_idx: 0, kind: TRIS },
-        ],
+        syntax: Syntax::Tris,
+        operands: &[],
         opcode: 0b00_0000_0110_0111,
     },
 
