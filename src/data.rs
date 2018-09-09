@@ -1,13 +1,16 @@
+#[derive(Clone)]
 struct Insn {
     desc: &'static InsnDesc,
     operands: [Opd; 2],
 }
 
+#[derive(Clone)]
 enum Opd {
     K(u16),
     // TODO: what else?
 }
 
+#[derive(Clone)]
 struct InsnDesc {
     mnemonic: &'static str,
     syntax: Syntax,
@@ -15,18 +18,21 @@ struct InsnDesc {
     opcode: u16,
 }
 
+#[derive(Clone, Copy)]
 enum Syntax {
     Normal,
     MoviwwiMM,
     MoviwwiOffset,
 }
 
+#[derive(Clone, Copy)]
 struct OpdDesc {
     field_idx: u8, // lsb to msb
     kind: OpdDescKind,
 }
 
 /// Tells the assembler how to turn an operand into bits.
+#[derive(Clone, Copy)]
 enum OpdDescKind {
     DC(u8), // don't care (default value is zero)
     F, // register
