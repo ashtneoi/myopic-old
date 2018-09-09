@@ -1,5 +1,3 @@
-use std::ptr;
-
 #[derive(Clone)]
 struct Insn {
     desc: &'static InsnDesc,
@@ -26,6 +24,20 @@ enum Syntax {
     MoviwwiMM,
     MoviwwiOffset,
     Tris,
+}
+
+impl Syntax {
+    // TODO: This doesn't belong here.
+    fn grammar_str(&self) -> &'static str {
+        use self::Syntax::*;
+        match *self {
+            Normal =>
+                panic!("you were supposed to use GrammarType::grammar_str()"),
+            MoviwwiMM => r#"mod[pre] fsrn[fsrn] / fsrn[fsrn] mod[post]"#,
+            MoviwwiOffset => r#"int ws "[" ws fsrn ws "]""#,
+            Tris => "tris",
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -68,6 +80,56 @@ impl OpdDescKind {
             PCLATH => 7,
             FSRn => 1,
             MM => 2,
+        }
+    }
+
+    fn grammar_type(&self) -> GrammarType {
+        match *self {
+            DC(_) => GrammarType::Invisible,
+            F => GrammarType::DataAddr,
+            D => GrammarType::Dest,
+            B => GrammarType::Bit,
+            K(_)
+            | UK(_)
+            | SK(_) => GrammarType::Int,
+            A => GrammarType::Bank,
+            PCLATH
+            | APK(_)
+            | RPK(_) => GrammarType::ProgAddr,
+            FSRn => GrammarType::FSRn,
+            MM => GrammarType::MM,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum GrammarType {
+    Invisible,
+    DataAddr,
+    ProgAddr,
+    Tris,
+    Bank,
+    Dest,
+    Bit,
+    Int,
+    FSRn,
+    MM,
+}
+
+impl GrammarType {
+    fn grammar_str(&self) -> &'static str {
+        use self::GrammarType::*;
+        match *self {
+            Invisible => "",
+            DataAddr => "data_addr",
+            ProgAddr => "prog_addr",
+            Tris => "tris",
+            Bank => "bank",
+            Dest => "dest",
+            Bit => "bit",
+            Int => "int",
+            FSRn => "fsrn",
+            MM => panic!("you were supposed to handle Syntax::MoviwwiMM"),
         }
     }
 }
