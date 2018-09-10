@@ -121,8 +121,8 @@ impl GrammarType {
         use self::GrammarType::*;
         match *self {
             Invisible => "",
-            DataAddr => "data_addr",
-            ProgAddr => "prog_addr",
+            DataAddr => "addr",
+            ProgAddr => "addr",
             Tris => "tris",
             Bank => "bank",
             Dest => "dest",
