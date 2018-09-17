@@ -83,27 +83,27 @@ impl OpdDescKind {
         }
     }
 
-    fn grammar_type(&self) -> GrammarType {
+    fn data_type(&self) -> DataType {
         match *self {
-            DC(_) => GrammarType::Invisible,
-            F => GrammarType::DataAddr,
-            D => GrammarType::Dest,
-            B => GrammarType::Bit,
+            DC(_) => DataType::Invisible,
+            F => DataType::DataAddr,
+            D => DataType::Dest,
+            B => DataType::Bit,
             K(_)
             | UK(_)
-            | SK(_) => GrammarType::Int,
-            A => GrammarType::Bank,
+            | SK(_) => DataType::Int,
+            A => DataType::Bank,
             PCLATH
             | APK(_)
-            | RPK(_) => GrammarType::ProgAddr,
-            FSRn => GrammarType::FSRn,
-            MM => GrammarType::MM,
+            | RPK(_) => DataType::ProgAddr,
+            FSRn => DataType::FSRn,
+            MM => DataType::MM,
         }
     }
 }
 
-#[derive(Clone, Copy)]
-enum GrammarType {
+#[derive(Clone, Copy, Debug)]
+enum DataType {
     Invisible,
     DataAddr,
     ProgAddr,
@@ -114,24 +114,6 @@ enum GrammarType {
     Int,
     FSRn,
     MM,
-}
-
-impl GrammarType {
-    fn grammar_str(&self) -> &'static str {
-        use self::GrammarType::*;
-        match *self {
-            Invisible => "",
-            DataAddr => "addr",
-            ProgAddr => "addr",
-            Tris => "tris",
-            Bank => "bank",
-            Dest => "dest",
-            Bit => "bit",
-            Int => "int",
-            FSRn => "fsrn",
-            MM => panic!("you were supposed to handle Syntax::MoviwwiMM"),
-        }
-    }
 }
 
 use self::OpdDescKind::*;
