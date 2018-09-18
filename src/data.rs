@@ -1,25 +1,25 @@
 #[derive(Clone)]
-struct Insn {
+pub(crate) struct Insn {
     desc: &'static InsnDesc,
     operands: [Opd; 2],
 }
 
 #[derive(Clone)]
-enum Opd {
+pub(crate) enum Opd {
     K(u16),
     // TODO: what else?
 }
 
 #[derive(Clone)]
-struct InsnDesc {
-    mnemonic: &'static str,
-    syntax: Syntax,
-    operands: &'static [OpdDesc], // opcode doesn't count
-    opcode: u16,
+pub(crate) struct InsnDesc {
+    pub(crate) mnemonic: &'static str,
+    pub(crate) syntax: Syntax,
+    pub(crate) operands: &'static [OpdDesc], // opcode doesn't count
+    pub(crate) opcode: u16,
 }
 
 #[derive(Clone, Copy)]
-enum Syntax {
+pub(crate) enum Syntax {
     Normal,
     MoviwwiMM,
     MoviwwiOffset,
@@ -41,14 +41,14 @@ impl Syntax {
 }
 
 #[derive(Clone, Copy)]
-struct OpdDesc {
+pub(crate) struct OpdDesc {
     field_idx: u8, // lsb to msb
     kind: OpdDescKind,
 }
 
 /// Tells the assembler how to turn an operand into bits.
 #[derive(Clone, Copy)]
-enum OpdDescKind {
+pub(crate) enum OpdDescKind {
     DC(u8), // don't care (default value is zero)
     F, // register
     D, // destination (F or W)
@@ -65,7 +65,7 @@ enum OpdDescKind {
 }
 
 impl OpdDescKind {
-    fn width(&self) -> usize {
+    pub(crate) fn width(&self) -> usize {
         match *self {
             DC(n)
             | K(n)
@@ -83,7 +83,7 @@ impl OpdDescKind {
         }
     }
 
-    fn data_type(&self) -> DataType {
+    pub(crate) fn data_type(&self) -> DataType {
         match *self {
             DC(_) => DataType::Invisible,
             F => DataType::DataAddr,
@@ -103,7 +103,7 @@ impl OpdDescKind {
 }
 
 #[derive(Clone, Copy, Debug)]
-enum DataType {
+pub(crate) enum DataType {
     Invisible,
     DataAddr,
     ProgAddr,
@@ -150,7 +150,7 @@ fn get_insn_desc_table() -> Vec<&'static InsnDesc> {
         }
     }
 
-    return table
+    table
 }
 
 #[test]
@@ -170,7 +170,7 @@ static INVALID_INSN_DESC: InsnDesc = InsnDesc {
     opcode: 0,
 };
 
-static INSN_DESCS: &[InsnDesc] = &[
+pub(crate) static INSN_DESCS: &[InsnDesc] = &[
     InsnDesc {
         mnemonic: "addwf",
         syntax: Syntax::Normal,

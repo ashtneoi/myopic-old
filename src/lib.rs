@@ -1,5 +1,15 @@
 extern crate destroy;
 
+use destroy::parse::{
+    parse_grammar,
+    ParseError,
+    Parser,
+};
+use destroy::string_table::{
+    StringTable,
+    StringTableEntry,
+};
+
 mod data;
 
 static GRAMMAR: &str = r##"
@@ -79,3 +89,19 @@ static GRAMMAR: &str = r##"
 
     tr_unit = ws (insn wso comment? "\n" ws)* (insn wso comment?)?
 "##;
+
+fn parse_tr_unit(input: &str) -> Result<(), ParseError> {
+    let mut tab = StringTable::new();
+    for (i, desc) in data::INSN_DESCS.iter().enumerate() {
+        let &StringTableEntry(_, k) = tab.insert(desc.mnemonic.to_string());
+        assert_eq!(i, k);
+    }
+    parse_grammar(&mut tab, GRAMMAR)?;
+    Ok(())
+}
+
+#[cfg(test)]
+#[test]
+fn parse_empty_string() {
+    parse_tr_unit("").unwrap();
+}
