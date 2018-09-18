@@ -42,8 +42,6 @@ static GRAMMAR: &str = r##"
         / ident[ident]
         / "(" wso expr[inner] wso ")"
 
-    bank = ident
-
     insn =
         # inherent
         (
@@ -77,9 +75,7 @@ static GRAMMAR: &str = r##"
         / "tris"[m] wso ("TRISA" / "TRISB" / "TRISC")[t]
 
         # n mm / k[n]
-        / ("moviw" / "movwi") wso (mod[pre] fsrn[fsrn] / fsrn
-
-
+        / ("moviw" / "movwi") wso (mod[pre] fsrn[fsrn] / fsrn[fsrn] mod[post])
 
     tr_unit = ws (insn wso comment? "\n" ws)* (insn wso comment?)?
 "##;
