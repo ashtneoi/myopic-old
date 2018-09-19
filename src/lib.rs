@@ -13,8 +13,8 @@ use destroy::string_table::{
 mod data;
 
 static GRAMMAR: &str = r##"
-    nzdigit = '1'..'9'
-    digit = "0" / nzdigit
+    dec_nzdigit = '1'..'9'
+    dec_digit = "0" / dec_nzdigit
     latin_letter = 'a'..'z' / 'A'..'Z'
 
     comment = "#" (-"\n" %)*
@@ -29,12 +29,12 @@ static GRAMMAR: &str = r##"
     bin_digit = '0'..'1'
     bin_uint = "0n" bin_digit+
 
-    dec_uint = "0" / nzdigit digit*
+    dec_uint = "0" / dec_nzdigit dec_digit*
 
     oct_digit = '0'..'7'
     oct_uint = "0c" oct_digit+
 
-    hex_digit = digit / 'a'..'f' / 'A'..'F'
+    hex_digit = dec_digit / 'a'..'f' / 'A'..'F'
     hex_uint = "0x" hex_digit+
 
     str =
@@ -42,12 +42,16 @@ static GRAMMAR: &str = r##"
         ("\\" ("n" / "t" / "\\" / "\"") / -"\"" -"\n" %)[cp]*
         "\""
     ident_initial = latin_letter / "_" / 0x80..0x10FFFF # TODO
-    ident = ident_initial (ident_initial / digit)* # TODO
+    ident = ident_initial (ident_initial / dec_digit)* # TODO
 
-    expr = expr2[opd] (wso ("+" / "-")[op] wso expr2[opd])*
-    expr2 = expr3[opd] (wso "*" wso expr3[opd])*
-    expr3 = ("-" / "~")[pre] wso expr4[opd]
-    expr4 =
+    expr = expr2[opd] (wso "|" wso expr2[opd])* # ltr
+    expr2 = expr3[opd] (wso "^" wso expr3[opd])* # ltr
+    expr3 = expr4[opd] (wso "&" wso expr4[opd])* # ltr
+    expr4 = expr5[opd] (wso ("+" / "-")[op] wso expr5[opd])* # ltr
+    expr5 = expr6[opd] (wso ("<<" / ">>")[op] wso expr6[opd])* # (!) ltr
+    expr6 = expr7[opd] (wso "*" wso expr7[opd])* # ltr
+    expr7 = ("-" / "~")[pre] wso expr8[opd] # rtl
+    expr8 =
         (bin_uint / dec_uint / oct_uint / hex_uint)[uint]
         / ident[ident]
         / "(" wso expr[inner] wso ")"
