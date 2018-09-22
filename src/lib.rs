@@ -50,7 +50,7 @@ static GRAMMAR: &str = r##"
     expr4 = expr5[opd] (wso ("+" / "-")[op] wso expr5[opd])* # ltr
     expr5 = expr6[opd] (wso ("<<" / ">>")[op] wso expr6[opd])* # (!) ltr
     expr6 = expr7[opd] (wso "*" wso expr7[opd])* # ltr
-    expr7 = ("-" / "~")[pre] wso expr8[opd] # rtl
+    expr7 = ("-" / "~")[pre]? wso expr8[opd] # rtl
     expr8 =
         (bin_uint / dec_uint / oct_uint / hex_uint)[uint]
         / ident[ident]
