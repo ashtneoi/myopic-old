@@ -27,15 +27,15 @@ static GRAMMAR: &str = r##"
     pws = ws_part+
 
     bin_digit = '0'..'1'
-    bin_uint = "0n" bin_digit+
+    bin_uint = "0n" (bin_digit / "_")+
 
-    dec_uint = "0" / dec_nzdigit dec_digit*
+    dec_uint = "0" / dec_nzdigit (dec_digit / "_")*
 
     oct_digit = '0'..'7'
-    oct_uint = "0c" oct_digit+
+    oct_uint = "0c" (oct_digit / "_")+
 
     hex_digit = dec_digit / 'a'..'f' / 'A'..'F'
-    hex_uint = "0x" hex_digit+
+    hex_uint = "0x" (hex_digit / "_")+
 
     str =
         "\""
