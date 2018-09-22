@@ -56,6 +56,9 @@ static GRAMMAR: &str = r##"
         / ident[ident]
         / "(" wso expr[inner] wso ")"
 
+    mod = "++" / "--"
+    fsrn = "FSR0" / "FSR1"
+
     insn =
         # inherent
         (
@@ -77,7 +80,7 @@ static GRAMMAR: &str = r##"
         / (
             "decfsz" / "incfsz" / "bcf" / "bsf" / "btfsc" / "btfss" / "ifc"
             / "ifs"
-        )[m] wso expr[f] wso "," wso bit[b]
+        )[m] wso expr[f] wso "," wso expr[b]
 
         # k
         / (
@@ -89,18 +92,21 @@ static GRAMMAR: &str = r##"
         / "tris"[m] wso ("TRISA" / "TRISB" / "TRISC")[t]
 
         # n mm / k[n]
-        / ("moviw" / "movwi") wso (mod[pre] fsrn[fsrn] / fsrn[fsrn] mod[post])
+        / ("moviw" / "movwi")[m] wso
+            (mod[pre] fsrn[fsrn] / fsrn[fsrn] mod[post])
 
-    tr_unit = ws (insn wso comment? "\n" ws)* (insn wso comment?)?
+    line = (ident[label] wso ":" wso)? (insn wso)? comment?
+    tr_unit = ws (line "\n" ws)* line?
 "##;
 
-fn parse_tr_unit(input: &str) -> Result<(), ParseError> {
+pub fn parse_tr_unit(input: &str) -> Result<(), ParseError> {
     let mut tab = StringTable::new();
     for (i, desc) in data::INSN_DESCS.iter().enumerate() {
         let &StringTableEntry(_, k) = tab.insert(desc.mnemonic.to_string());
         assert_eq!(i, k);
     }
-    parse_grammar(&mut tab, GRAMMAR)?;
+    let g = parse_grammar(&mut tab, GRAMMAR)?;
+    let tr_unit = Parser::parse(&g, "tr_unit", input)?;
     Ok(())
 }
 
