@@ -4,10 +4,34 @@ pub(crate) struct Insn {
     operands: [Opd; 2],
 }
 
-#[derive(Clone)]
-pub(crate) enum Opd {
-    K(u16),
-    // TODO: what else?
+impl Insn {
+    fn encode(&self) -> u16 {
+        // TODO: Do we want to precompute or at least cache this?
+        let mut fields_desc = self.desc.operands.to_vec();
+        if fields_desc[0].field_idx == 1 {
+            fields_desc.swap(0, 1);
+        }
+
+        let mut word = self.desc.opcode;
+        for (field_desc, opd) in fields_desc.iter().zip(&self.operands) {
+            let width = field_desc.kind.width();
+            assert_eq!(((1 << width) - 1) & word, 0);
+            word |= opd.raw;
+            word <<= width;
+        }
+        word
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn round_trip() {
+}
+
+#[derive(Clone, Default)]
+pub(crate) struct Opd {
+    // TODO: Figure this out.
+    raw: u16,
 }
 
 #[derive(Clone)]
@@ -92,7 +116,7 @@ impl OpdDescKind {
             K(_)
             | UK(_)
             | SK(_) => DataType::Int,
-            A => DataType::Bank,
+            A => DataType::DataAddr, // watch out!
             PCLATH
             | APK(_)
             | RPK(_) => DataType::ProgAddr,
@@ -108,7 +132,6 @@ pub(crate) enum DataType {
     DataAddr,
     ProgAddr,
     Tris,
-    Bank,
     Dest,
     Bit,
     Int,
@@ -136,31 +159,57 @@ static K8_OPERANDS: &[OpdDesc] = &[
     OpdDesc { field_idx: 0, kind: K(8) },
 ];
 
-fn get_insn_desc_table() -> Vec<&'static InsnDesc> {
-    let mut table = vec![&INVALID_INSN_DESC; 0b100_0000_0000_0000];
-    for desc in INSN_DESCS {
-        let total_opd_width: usize =
-            desc.operands.iter().map(|opd| opd.kind.width()).sum();
-        let mask: usize = (1 << total_opd_width) - 1;
-        let start: usize = desc.opcode as usize;
-        let end: usize = desc.opcode as usize | mask;
-        println!("{} {:b} {:b} {:b}", desc.mnemonic, mask, start, end);
-        for opcode in start..=end {
-            table[opcode] = desc;
-        }
-    }
-
-    table
+struct InsnDescTable {
+    table: Vec<&'static InsnDesc>,
 }
 
+impl InsnDescTable {
+    fn new() -> Self {
+        let mut table = vec![&INVALID_INSN_DESC; 0b100_0000_0000_0000];
+        for desc in INSN_DESCS {
+            let total_opd_width: usize =
+                desc.operands.iter().map(|opd| opd.kind.width()).sum();
+            let mask: usize = (1 << total_opd_width) - 1;
+            let start: usize = desc.opcode as usize;
+            let end: usize = desc.opcode as usize | mask;
+            println!("{} {:b} {:b} {:b}", desc.mnemonic, mask, start, end);
+            for opcode in start..=end {
+                table[opcode] = desc;
+            }
+        }
+
+        Self { table }
+    }
+
+    fn decode(&self, word: u16) -> Insn {
+        let insn_desc = self.table[word as usize];
+
+        // TODO: Do we want to precompute or at least cache this?
+        let mut fields_desc = insn_desc.operands.to_vec();
+        fields_desc.sort_unstable_by_key(|field_desc| field_desc.field_idx);
+
+        let mut word = word;
+        let mut operands = [Opd::default(), Opd::default()];
+        for (field_desc, opd) in fields_desc.iter().zip(operands.iter_mut()) {
+            let width = field_desc.kind.width();
+            let field = ((1 << width) - 1) & word;
+            word <<= width;
+            opd.raw = field;
+        }
+
+        Insn { desc: insn_desc, operands }
+    }
+}
+
+#[cfg(test)]
 #[test]
 fn test_get_insn_desc_table() {
-    let table = get_insn_desc_table();
-    assert_eq!(table.len(), 0b100_0000_0000_0000);
-    assert_eq!(table[0b00_1001_0000_0000].mnemonic, "comf");
-    assert_eq!(table[0b00_1001_0111_1111].mnemonic, "comf");
-    assert_eq!(table[0b00_1001_1111_1111].mnemonic, "comf");
-    assert_eq!(table[0b00_0000_0000_0010].mnemonic, "_invalid_");
+    let table = InsnDescTable::new();
+    assert_eq!(table.table.len(), 0b100_0000_0000_0000); // ?
+    assert_eq!(table.decode(0b00_1001_0000_0000).desc.mnemonic, "comf");
+    assert_eq!(table.decode(0b00_1001_0111_1111).desc.mnemonic, "comf");
+    assert_eq!(table.decode(0b00_1001_1111_1111).desc.mnemonic, "comf");
+    assert_eq!(table.decode(0b00_0000_0000_0010).desc.mnemonic, "_invalid_");
 }
 
 static INVALID_INSN_DESC: InsnDesc = InsnDesc {

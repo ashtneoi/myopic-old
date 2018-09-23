@@ -44,6 +44,7 @@ static GRAMMAR: &str = r##"
     ident_initial = latin_letter / "_" / 0x80..0x10FFFF # TODO
     ident = ident_initial (ident_initial / dec_digit)* # TODO
 
+    # same as C precedence except for bit shift operators
     expr = expr2[opd] (wso "|" wso expr2[opd])* # ltr
     expr2 = expr3[opd] (wso "^" wso expr3[opd])* # ltr
     expr3 = expr4[opd] (wso "&" wso expr4[opd])* # ltr
