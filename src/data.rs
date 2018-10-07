@@ -7,18 +7,23 @@ pub(crate) struct Insn {
 impl Insn {
     fn encode(&self) -> u16 {
         // TODO: Do we want to precompute or at least cache this?
-        let mut fields_desc = self.desc.operands.to_vec();
-        if fields_desc[0].field_idx == 1 {
-            fields_desc.swap(0, 1);
-        }
+        let mut fields: Vec<_> = self.desc.operands
+            .iter()
+            .zip(&self.operands)
+            .collect();
+        fields.sort_unstable_by_key(
+            |(desc, _)| -(desc.field_idx as isize)
+        );
 
-        let mut word = self.desc.opcode;
-        for (field_desc, opd) in fields_desc.iter().zip(&self.operands) {
+        let mut word = 0;
+        for (field_desc, opd) in fields {
             let width = field_desc.kind.width();
+            println!("width: {}", width);
+            word <<= width;
             assert_eq!(((1 << width) - 1) & word, 0);
             word |= opd.raw;
-            word <<= width;
         }
+        word |= self.desc.opcode;
         word
     }
 }
@@ -26,6 +31,17 @@ impl Insn {
 #[cfg(test)]
 #[test]
 fn round_trip() {
+    let table = InsnDescTable::new();
+    for word in 0..0b100_0000_0000_0000 {
+        let insn = table.decode(word);
+        // TODO: Am I going to forget to update this string?
+        if insn.desc.mnemonic != "_invalid_" {
+            println!("{}", insn.desc.mnemonic);
+            let word2 = insn.encode();
+            println!("{:b} {:b}", word, word2);
+            assert_eq!(word, word2);
+        }
+    }
 }
 
 #[derive(Clone, Default)]
@@ -172,7 +188,7 @@ impl InsnDescTable {
             let mask: usize = (1 << total_opd_width) - 1;
             let start: usize = desc.opcode as usize;
             let end: usize = desc.opcode as usize | mask;
-            println!("{} {:b} {:b} {:b}", desc.mnemonic, mask, start, end);
+            //println!("{} {:b} {:b} {:b}", desc.mnemonic, mask, start, end);
             for opcode in start..=end {
                 table[opcode] = desc;
             }
@@ -185,16 +201,24 @@ impl InsnDescTable {
         let insn_desc = self.table[word as usize];
 
         // TODO: Do we want to precompute or at least cache this?
-        let mut fields_desc = insn_desc.operands.to_vec();
-        fields_desc.sort_unstable_by_key(|field_desc| field_desc.field_idx);
-
-        let mut word = word;
         let mut operands = [Opd::default(), Opd::default()];
-        for (field_desc, opd) in fields_desc.iter().zip(operands.iter_mut()) {
-            let width = field_desc.kind.width();
-            let field = ((1 << width) - 1) & word;
-            word <<= width;
-            opd.raw = field;
+
+        {
+            let mut fields: Vec<_> = insn_desc.operands
+                .iter()
+                .zip(operands.iter_mut())
+                .collect();
+            fields.sort_unstable_by_key(
+                |(desc, _)| desc.field_idx
+            );
+
+            let mut word = word;
+            for (field_desc, opd) in fields {
+                let width = field_desc.kind.width();
+                let field = ((1 << width) - 1) & word;
+                word >>= width;
+                opd.raw = field;
+            }
         }
 
         Insn { desc: insn_desc, operands }
