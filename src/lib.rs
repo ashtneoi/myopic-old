@@ -53,7 +53,7 @@ static GRAMMAR: &str = r##"
     expr6 = expr7[opd] (wso "*" wso expr7[opd])* # ltr
     expr7 = ("-" / "~")[pre]? wso expr8[opd] # rtl
     expr8 =
-        (bin_uint / dec_uint / oct_uint / hex_uint)[uint]
+        (bin_uint / oct_uint / hex_uint / dec_uint)[uint]
         / ident[ident]
         / "(" wso expr[inner] wso ")"
 
