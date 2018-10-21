@@ -123,7 +123,7 @@ pub fn parse_tr_unit(input: &str) -> Result<String, String> {
     println!("{:?}", tr_unit_st);
 
     let mut line_sts = tr_unit_st.iter("line").peekable();
-    while line_sts.peek().is_some() {
+    'outer: while line_sts.peek().is_some() {
         let mut labels = vec![];
         let mut insn = None;
         while insn.is_none() {
@@ -134,16 +134,28 @@ pub fn parse_tr_unit(input: &str) -> Result<String, String> {
                     labels.push(label.raw(input));
                 }
                 // build insn from 'm', if present
+                let m = line_st.get_or_empty("m");
+                assert!(m.len() <= 1);
+                if let Some(m) = m.first() {
+                    insn = Some(Insn {
+                        desc: nop_insn,
+                        operands: [
+                            Opd { raw: 0 },
+                            Opd { raw: 0 },
+                        ],
+                    });  // FIXME
+                }
             } else if !labels.is_empty() {
-                // nop_insn thing goes here
+                insn = Some(Insn {
+                    desc: nop_insn,
+                    operands: [
+                        Opd { raw: 0 },
+                        Opd { raw: 0 },
+                    ],
+                });
+            } else {
+                break 'outer; // sorry
             }
-            insn = Some(Insn {
-                desc: nop_insn,
-                operands: [
-                    Opd { raw: 0 },
-                    Opd { raw: 0 },
-                ],
-            });  // FIXME
         }
         tr_unit.0.push((labels, insn.unwrap()));
     }
