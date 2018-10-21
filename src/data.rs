@@ -1,7 +1,15 @@
-#[derive(Clone)]
+use std::fmt;
+
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Opd {
+    // TODO: Figure this out.
+    pub(crate) raw: u16,
+}
+
+#[derive(Clone, Debug)]
 pub(crate) struct Insn {
-    desc: &'static InsnDesc,
-    operands: [Opd; 2],
+    pub(crate) desc: &'static InsnDesc,
+    pub(crate) operands: [Opd; 2],
 }
 
 impl Insn {
@@ -44,18 +52,18 @@ fn round_trip() {
     }
 }
 
-#[derive(Clone, Default)]
-pub(crate) struct Opd {
-    // TODO: Figure this out.
-    raw: u16,
-}
-
 #[derive(Clone)]
 pub(crate) struct InsnDesc {
     pub(crate) mnemonic: &'static str,
     pub(crate) syntax: Syntax,
     pub(crate) operands: &'static [OpdDesc], // opcode doesn't count
     pub(crate) opcode: u16,
+}
+
+impl fmt::Debug for InsnDesc {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.mnemonic)
+    }
 }
 
 #[derive(Clone, Copy)]

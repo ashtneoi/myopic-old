@@ -1,5 +1,6 @@
 extern crate destroy;
 
+use data::{Insn, INSN_DESCS, Opd};
 use destroy::parse::{
     parse_grammar,
     ParseError,
@@ -97,18 +98,57 @@ static GRAMMAR: &str = r##"
             (mod[pre] fsrn[fsrn] / fsrn[fsrn] mod[post])
 
     line = (ident[label] wso ":" wso)? (insn wso)? comment?
-    tr_unit = ws (line "\n" ws)* line?
+    tr_unit = ws (line[line] "\n" ws)* line[line]?
 "##;
 
-pub fn parse_tr_unit(input: &str) -> Result<(), ParseError> {
+#[derive(Debug)]
+pub(crate) struct TrUnit<'s>(Vec<(Vec<&'s str>, Insn)>);
+
+pub fn parse_tr_unit(input: &str) -> Result<String, String> {
+    let nop_insn =
+        INSN_DESCS.iter().find(|desc| desc.mnemonic == "nop").unwrap();
+
     let mut tab = StringTable::new();
     for (i, desc) in data::INSN_DESCS.iter().enumerate() {
         let &StringTableEntry(_, k) = tab.insert(desc.mnemonic.to_string());
         assert_eq!(i, k);
     }
-    let g = parse_grammar(&mut tab, GRAMMAR)?;
-    let tr_unit = Parser::parse(&g, "tr_unit", input)?;
-    Ok(())
+    let g = parse_grammar(&mut tab, GRAMMAR)
+        .map_err(|e| format!("{}", e))?;
+    let tr_unit_st = Parser::parse(&g, "tr_unit", input)
+        .map_err(|e| format!("{}", e))?;
+
+    let mut tr_unit = TrUnit(vec![]);
+
+    println!("{:?}", tr_unit_st);
+
+    let mut line_sts = tr_unit_st.iter("line").peekable();
+    while line_sts.peek().is_some() {
+        let mut labels = vec![];
+        let mut insn = None;
+        while insn.is_none() {
+            if let Some(line_st) = line_sts.next() {
+                let label = line_st.get_or_empty("label");
+                assert!(label.len() <= 1);
+                if let Some(label) = label.first() {
+                    labels.push(label.raw(input));
+                }
+                // build insn from 'm', if present
+            } else if !labels.is_empty() {
+                // nop_insn thing goes here
+            }
+            insn = Some(Insn {
+                desc: nop_insn,
+                operands: [
+                    Opd { raw: 0 },
+                    Opd { raw: 0 },
+                ],
+            });  // FIXME
+        }
+        tr_unit.0.push((labels, insn.unwrap()));
+    }
+
+    Ok(format!("{:?}", tr_unit))
 }
 
 #[cfg(test)]

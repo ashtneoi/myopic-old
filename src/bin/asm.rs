@@ -20,5 +20,5 @@ fn main() {
         input
     };
 
-    parse_tr_unit(&input).unwrap();
+    println!("{}", parse_tr_unit(&input).unwrap());
 }
