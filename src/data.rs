@@ -1,8 +1,43 @@
+// "raw" vs not
+
 use std::fmt;
 
-#[derive(Clone, Debug, Default)]
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum DataType {
+    Invisible,
+    DataAddr,
+    ProgAddr,
+    Tris,
+    Dest,
+    Bit,
+    Int,
+    FSRn,
+    MM,
+}
+
 pub(crate) struct Opd {
-    // TODO: Figure this out.
+    pub(crate) ty: DataType,
+    pub(crate) val: Value,
+}
+
+pub(crate) enum Value {
+    Literal(isize),  // TODO: is isize right?
+    Ident(String),
+    Add(Vec<Value>),
+    Sub(Vec<Value>),
+    Mul(Vec<Value>),
+    BwOr(Vec<Value>),
+    BwXor(Vec<Value>),
+    BwAnd(Vec<Value>),
+    BwNot(Value),
+    LShift(Vec<Value>),
+    RShift(Vec<Value>),
+    Neg(Value),
+}
+
+#[derive(Clone, Debug, Default)]
+pub(crate) struct RawOpd {
     pub(crate) raw: u16,
 }
 
@@ -94,7 +129,7 @@ pub(crate) struct OpdDesc {
     kind: OpdDescKind,
 }
 
-/// Tells the assembler how to turn an operand into bits.
+/// Tells the assembler how to encode an operand into bits.
 #[derive(Clone, Copy)]
 pub(crate) enum OpdDescKind {
     DC(u8), // don't care (default value is zero)
@@ -148,19 +183,6 @@ impl OpdDescKind {
             MM => DataType::MM,
         }
     }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub(crate) enum DataType {
-    Invisible,
-    DataAddr,
-    ProgAddr,
-    Tris,
-    Dest,
-    Bit,
-    Int,
-    FSRn,
-    MM,
 }
 
 use self::OpdDescKind::*;
